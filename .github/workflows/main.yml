@@ -1,7 +1,7 @@
-# Integrazione continua: verifica che il progetto compili e che i test passino
-# a ogni push (su qualsiasi ramo) e a ogni pull request verso main.
-# La pubblicazione su GitHub Pages è nel workflow separato deploy.yml.
-name: CI
+# Unico workflow: test + build a ogni push; pubblicazione su GitHub Pages
+# solo quando il push arriva sul ramo main.
+# Prerequisito (una volta sola): Settings → Pages → Source: "GitHub Actions".
+name: CI e pubblicazione
 
 on:
   push:
@@ -12,13 +12,15 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  verifica:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,9 +33,19 @@ jobs:
         run: npm test
       - name: Build di produzione
         run: npm run build
-      - name: Conserva la build (scaricabile per 7 giorni dal tab Actions)
-        uses: actions/upload-artifact@v4
+      - name: Carica la build per GitHub Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: dist
           path: dist
-          retention-days: 7
+
+  deploy:
+    # pubblica solo dal ramo main (non da altri rami né da pull request)
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
