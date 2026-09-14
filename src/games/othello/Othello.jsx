@@ -4,7 +4,7 @@ import * as engine from './engine.js'
 import { N, counts } from './engine.js'
 
 export default function Othello({ onHome }) {
-  const g = useGame('othello', engine)
+  const g = useGame('othello', engine, null, { moveKind: (p, n) => (n.flipped?.length >= 3 ? 'capture' : 'move') })
   const { state, status, human, history } = g
   const legal = g.isHumanTurn ? engine.legalMoves(state).filter((m) => m >= 0) : []
   const [black, white] = counts(state.board)

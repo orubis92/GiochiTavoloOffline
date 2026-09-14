@@ -32,10 +32,18 @@ export function useAi() {
     })
   }, [])
 
+  const analyze = useCallback((game, state) => {
+    return new Promise((resolve, reject) => {
+      const id = ++seq.current
+      pending.current.set(id, { resolve, reject })
+      workerRef.current.postMessage({ id, game, state, kind: 'analyze' })
+    })
+  }, [])
+
   const cancelAll = useCallback(() => {
     // le risposte in arrivo vengono ignorate
     pending.current.clear()
   }, [])
 
-  return { think, cancelAll }
+  return { think, analyze, cancelAll }
 }

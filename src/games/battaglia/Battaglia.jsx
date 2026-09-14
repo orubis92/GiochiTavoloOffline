@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import GameShell from '../../components/GameShell.jsx'
 import { loadJSON, saveJSON } from '../../storage.js'
+import { play, vibrate } from '../../sound.js'
 import { N, FLEET, idx, rc, shipCells, canPlace, randomFleet, initialState, fire, allSunk, aiPick } from './engine.js'
 
 const LETTERS = 'ABCDEFGHIJ'
@@ -88,6 +89,7 @@ export default function Battaglia({ onHome }) {
     const cells = shipCells(r, c, f.len, horizontal)
     if (!cells || !canPlace(s.player.ships, cells, selShip)) {
       setMsg('Posizione non valida: le navi non possono toccarsi')
+      play('error')
       return
     }
     setMsg('')
@@ -106,6 +108,7 @@ export default function Battaglia({ onHome }) {
   const start = () => {
     if (!allPlaced) return
     setS({ ...s, phase: 'playing', turn: 1, log: [] })
+    play('hint')
     setMsg('Spara sulla griglia nemica')
   }
 
@@ -131,6 +134,8 @@ export default function Battaglia({ onHome }) {
     const res = fire(s.computer, i)
     if (!res) return
     const over = allSunk(res.side)
+    play(res.result === 'miss' ? 'splash' : res.result === 'hit' ? 'hit' : 'sunk')
+    if (res.result !== 'miss') vibrate(res.result === 'sunk' ? [30, 40, 60] : 25)
     setLastRes({ me: describe(res.result, res.ship), pc: '' })
     setMsg('')
     setS({
@@ -152,6 +157,7 @@ export default function Battaglia({ onHome }) {
       const over = res ? allSunk(res.side) : false
       setBusy(false)
       if (!res) return
+      play(res.result === 'miss' ? 'splash' : res.result === 'hit' ? 'hit' : 'sunk')
       setLastRes((l) => ({ ...l, pc: describe(res.result, res.ship) }))
       setS((cur) => ({
         ...cur,
@@ -167,6 +173,12 @@ export default function Battaglia({ onHome }) {
       setBusy(false)
     }
   }, [s.phase, s.turn, s.player, settings.difficulty])
+
+  useEffect(() => {
+    if (s.phase !== 'over') return
+    const t = setTimeout(() => play(s.winner === 1 ? 'win' : 'lose'), 300)
+    return () => clearTimeout(t)
+  }, [s.phase, s.winner])
 
   let statusText = msg
   if (s.phase === 'placing') statusText = msg || 'Posiziona la tua flotta'

@@ -4,7 +4,7 @@
 //        11 / 12 = dame (re) dei rispettivi giocatori.
 // Caselle giocabili: le scure, ossia (riga + colonna) pari, con la casella
 // d'angolo alla destra di ogni giocatore scura (regola italiana).
-import { search } from '../../engine/minimax.js'
+import { search, searchScored } from '../../engine/minimax.js'
 
 export const N = 8
 export const idx = (r, c) => r * N + c
@@ -167,3 +167,10 @@ export function bestMove(s, difficulty) {
   }[difficulty]
   return search(engine, s, { ...cfg, timeMs: 2500 })
 }
+
+// Analisi per la modalità istruttore: tutte le mosse con punteggio esatto.
+export function analyze(s) {
+  return searchScored(engine, s, { maxDepth: 7, timeMs: 1200 })
+}
+
+export const moveKey = (m) => `${m.from}-${m.to}-${m.captures.join('.')}`

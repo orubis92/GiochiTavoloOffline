@@ -11,12 +11,13 @@
 
 const WIN = 1_000_000
 
-export function search(engine, state, opts = {}) {
-  const { maxDepth = 4, timeMs = 1500, randomness = 0, orderMoves } = opts
+// Restituisce tutte le mosse alla radice con il punteggio esatto, ordinate
+// dalla migliore alla peggiore: { scored: [{ m, v }], depth }.
+export function searchScored(engine, state, opts = {}) {
+  const { maxDepth = 4, timeMs = 1500, orderMoves } = opts
   const me = state.turn
   const moves = engine.legalMoves(state)
-  if (moves.length === 0) return null
-  if (moves.length === 1) return moves[0]
+  if (moves.length === 0) return { scored: [], depth: 0 }
 
   const deadline = Date.now() + timeMs
   let nodes = 0
@@ -53,8 +54,8 @@ export function search(engine, state, opts = {}) {
     return best
   }
 
-  let bestMove = moves[0]
   let scored = []
+  let reached = 0
   for (let depth = 1; depth <= maxDepth; depth++) {
     const results = []
     // Alla radice si usa la finestra completa: servono punteggi esatti per
@@ -73,12 +74,22 @@ export function search(engine, state, opts = {}) {
       break
     }
     scored = results.sort((a, b) => b.v - a.v)
+    reached = depth
     if (scored.some((r) => r.v >= WIN)) break // vittoria forzata trovata
     if (Date.now() > deadline) break
   }
-  if (scored.length === 0) return bestMove
-
   scored.sort((a, b) => b.v - a.v)
+  return { scored, depth: reached }
+}
+
+export function search(engine, state, opts = {}) {
+  const { randomness = 0 } = opts
+  const moves = engine.legalMoves(state)
+  if (moves.length === 0) return null
+  if (moves.length === 1) return moves[0]
+  const { scored } = searchScored(engine, state, opts)
+  let bestMove = moves[0]
+  if (scored.length === 0) return bestMove
   const top = scored[0].v
   // fra mosse a pari punteggio scegli a caso, così il computer non è prevedibile
   const ties = scored.filter((r) => r.v === top)
@@ -91,6 +102,8 @@ export function search(engine, state, opts = {}) {
   }
   return bestMove
 }
+
+export const WIN_SCORE = WIN
 
 export const DIFFICULTY = {
   1: { label: 'Facile' },

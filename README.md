@@ -54,11 +54,37 @@ tests/engines.test.js     test delle regole e dell'IA
 - **Othello**: passo automatico quando non ci sono mosse; valutazione posizionale + mobilità.
 - **Forza 4** e **Tris**: minimax; al livello difficile il Tris è imbattibile.
 
+## Modalità istruttore (Dama e Scacchi)
+
+Interruttore "🎓 Istruttore" sotto la plancia (attivo di default, la scelta viene ricordata):
+
+- **Giudizio su ogni mossa**: dopo ogni tua mossa il motore la confronta con la migliore che aveva trovato
+  e la classifica (mossa migliore / buona / imprecisione / errore / errore grave) con una spiegazione in
+  italiano: pezzo lasciato in presa, matto mancato, cattura mancata, presa concessa all'avversario,
+  promozione mancata, principi di apertura, ecc.
+- **Riprova la mossa**: sugli errori compare un pulsante per annullare e rigiocare.
+- **Suggerimento**: evidenzia sulla plancia la mossa consigliata e spiega perché.
+- **Consigli** casuali quando non c'è nulla da commentare e **riepilogo** delle mosse a fine partita.
+- Pulsante **?** in alto: regole del gioco in breve.
+
+L'analisi gira nel Web Worker a profondità fissa (scacchi 3 semimosse + quiescenza, dama 7) ed è
+indipendente dal livello di difficoltà scelto. Il codice è in `src/coach/`.
+
 ## Difficoltà
 
 Tre livelli per ogni gioco (selettore in alto a destra). Il livello facile introduce mosse
 sub-ottimali casuali; il difficile usa tutta la profondità disponibile entro un limite di tempo,
 quindi su dispositivi lenti l'IA gioca comunque entro pochi secondi.
+
+## Interfaccia, suoni ed effetti
+
+Tema scuro "da circolo" con accenti oro e pannelli in vetro smerigliato (`src/index.css`, variabili in `:root`).
+Icone SVG dei giochi in `src/components/GameIcon.jsx`. Animazioni leggere (comparsa pezzi, caduta gettoni,
+capovolgimento pedine, onda sui colpi) disattivate automaticamente con `prefers-reduced-motion`.
+
+Effetti sonori sintetizzati con WebAudio in `src/sound.js` (nessun file audio): mossa, cattura, suggerimento,
+errore, colpo/acqua/affondato, vittoria/sconfitta/patta, più una vibrazione leggera sulle catture (dove supportata).
+Interruttore 🔊/🔇 in home e in ogni partita; la scelta è salvata (`gto:sound`).
 
 ## Salvataggio
 

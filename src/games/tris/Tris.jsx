@@ -40,9 +40,9 @@ export default function Tris({ onHome }) {
             className={`sq ${line.includes(i) ? 'win' : ''} ${v === 1 ? 'x' : v === 2 ? 'o' : ''}`}
             onClick={() => v === 0 && g.humanMove(i)}
             disabled={v !== 0 || !g.isHumanTurn}
-            style={{ borderRadius: 0, minHeight: 0, padding: 0 }}
+            style={{ minHeight: 0, padding: 0 }}
           >
-            {v ? sym(v) : ''}
+            {v ? <span>{sym(v)}</span> : ''}
           </button>
         ))}
       </div>

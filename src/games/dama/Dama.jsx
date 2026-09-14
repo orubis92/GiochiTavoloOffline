@@ -2,10 +2,24 @@ import { useMemo, useState } from 'react'
 import GameShell, { resultFor } from '../../components/GameShell.jsx'
 import { useGame } from '../../hooks/useGame.js'
 import * as engine from './engine.js'
-import { N, isDark, owner, isKing, countPieces } from './engine.js'
+import { N, isDark, owner, isKing, countPieces, moveKey } from './engine.js'
+import * as coachDama from '../../coach/dama.js'
+
+const COACH = { moveKey, unit: 100, describe: coachDama.describeMove, explain: coachDama.explain }
+
+const RULES = [
+  'Si gioca sulle caselle scure; il bianco muove per primo. La casella d\'angolo alla tua destra è scura.',
+  'La pedina muove di una casella in diagonale, solo in avanti.',
+  'La presa è obbligatoria: se puoi mangiare, devi farlo. Si mangia saltando il pezzo avversario su una casella libera, anche più volte di seguito.',
+  'La pedina mangia solo in avanti e non può mangiare la dama.',
+  'Se hai più prese possibili devi scegliere quella che cattura più pezzi; a parità, quella con la dama; poi quella che cattura più dame.',
+  'La pedina che arriva sull\'ultima riga diventa dama (e si ferma lì anche se potrebbe continuare a mangiare).',
+  'La dama muove e mangia di una casella in diagonale in tutte le direzioni.',
+  'Vince chi cattura tutti i pezzi avversari o blocca ogni loro mossa. Dopo 40 mosse senza prese è patta.',
+]
 
 export default function Dama({ onHome }) {
-  const g = useGame('dama', engine)
+  const g = useGame('dama', engine, COACH, { moveKind: (p, n, m) => (m.captures.length ? 'capture' : 'move') })
   const { state, status, human, history } = g
   const [sel, setSel] = useState(null)
   const flipped = human === 2
@@ -15,6 +29,7 @@ export default function Dama({ onHome }) {
   const movablePieces = new Set(legal.map((m) => m.from))
   const targets = sel === null ? [] : legal.filter((m) => m.from === sel)
   const lastPath = state.last?.path || []
+  const hintMove = g.coach?.hint?.move
   const counts = countPieces(state.board)
 
   const onSquare = (i) => {
@@ -60,6 +75,9 @@ export default function Dama({ onHome }) {
         onChange: (v) => { setSel(null); g.newGame({ human: Number(v) }) },
       }}
       result={result}
+      coach={g.coach && { ...g.coach, tips: coachDama.TIPS }}
+      rules={RULES}
+      canHint={g.isHumanTurn}
     >
       <div className="board n8">
         {order.map((i) => {
@@ -71,14 +89,13 @@ export default function Dama({ onHome }) {
             isDark(r, c) ? 'dark' : 'light',
             sel === i ? 'sel' : '',
             lastPath.includes(i) ? 'last' : '',
+            hintMove && hintMove.from === i ? 'hint-from' : '',
+            hintMove && hintMove.to === i ? 'hint-to' : '',
           ].join(' ')
           return (
             <div key={i} className={cls} onClick={() => onSquare(i)}>
               {v !== 0 && (
-                <div
-                  className={`piece p${owner(v)} ${isKing(v) ? 'king' : ''}`}
-                  style={movablePieces.has(i) && sel === null ? { outline: '3px solid var(--accent)' } : undefined}
-                />
+                <div className={`piece p${owner(v)} ${isKing(v) ? 'king' : ''} ${movablePieces.has(i) && sel === null ? 'movable' : ''}`} />
               )}
               {target && <div className={`hint ${target.captures.length ? 'capture' : ''}`} />}
             </div>

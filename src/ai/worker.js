@@ -8,8 +8,12 @@ import * as scacchi from '../games/scacchi/engine.js'
 const ENGINES = { tris, forza4, othello, dama, scacchi }
 
 self.onmessage = (e) => {
-  const { id, game, state, difficulty } = e.data
+  const { id, game, state, difficulty, kind } = e.data
   try {
+    if (kind === 'analyze') {
+      self.postMessage({ id, move: ENGINES[game].analyze(state) })
+      return
+    }
     const move = ENGINES[game].bestMove(state, difficulty)
     self.postMessage({ id, move })
   } catch (err) {

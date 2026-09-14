@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { GAMES } from './games/index.js'
 import { loadJSON } from './storage.js'
+import GameIcon from './components/GameIcon.jsx'
+import SoundToggle from './components/SoundToggle.jsx'
 import Dama from './games/dama/Dama.jsx'
 import Scacchi from './games/scacchi/Scacchi.jsx'
 import Battaglia from './games/battaglia/Battaglia.jsx'
@@ -43,23 +45,28 @@ export default function App() {
 function Home({ onOpen }) {
   return (
     <div className="home">
-      <h1>Giochi da Tavolo</h1>
-      <p className="sub">Sei giochi classici contro il computer, senza connessione.</p>
+      <div className="hero">
+        <div>
+          <h1>Giochi da <span>Tavolo</span></h1>
+          <p className="sub">Sei classici contro il computer, sempre con te, anche senza rete.</p>
+        </div>
+        <SoundToggle />
+      </div>
       <div className="grid">
         {GAMES.map((g) => {
           const saved = loadJSON('game:' + g.id, null)
           const inProgress = saved && !saved.over
           return (
-            <button key={g.id} className="card" onClick={() => onOpen(g.id)}>
+            <button key={g.id} className="card" style={{ '--tint': g.tint }} onClick={() => onOpen(g.id)}>
               {inProgress && <span className="badge">in corso</span>}
-              <span className="icon" aria-hidden>{g.icon}</span>
+              <span className="icon"><GameIcon id={g.id} size={40} /></span>
               <span className="name">{g.name}</span>
               <span className="desc">{g.desc}</span>
             </button>
           )
         })}
       </div>
-      <footer>Le partite vengono salvate automaticamente sul dispositivo.</footer>
+      <footer>Le partite si salvano da sole sul dispositivo · Dama e Scacchi con istruttore integrato</footer>
     </div>
   )
 }

@@ -156,15 +156,10 @@ function orderMoves(moves) {
     .map((x) => x.m)
 }
 
-export function bestMove(s, difficulty) {
+export function searchScored(s, cfg) {
   const ch = load(s)
   const moves = ch.moves({ verbose: true })
-  if (moves.length === 0) return null
-  const cfg = {
-    1: { maxDepth: 1, timeMs: 800, randomness: 0.5, quiesce: false },
-    2: { maxDepth: 3, timeMs: 1500, randomness: 0.05, quiesce: true },
-    3: { maxDepth: 4, timeMs: 3000, randomness: 0, quiesce: true },
-  }[difficulty]
+  if (moves.length === 0) return { scored: [], depth: 0 }
   const deadline = Date.now() + cfg.timeMs
   let nodes = 0
   let timedOut = false
@@ -206,6 +201,7 @@ export function bestMove(s, difficulty) {
   }
 
   let scored = []
+  let reached = 0
   for (let depth = 1; depth <= cfg.maxDepth; depth++) {
     const results = []
     // prova per prima la mossa migliore dell'iterazione precedente
@@ -222,11 +218,25 @@ export function bestMove(s, difficulty) {
       break
     }
     scored = results.sort((a, b) => b.v - a.v)
+    reached = depth
     if (scored[0].v >= MATE - 100) break
     if (Date.now() > deadline) break
   }
-  if (!scored.length) return moves[0]
   scored.sort((a, b) => b.v - a.v)
+  return { scored, depth: reached }
+}
+
+export function bestMove(s, difficulty) {
+  const cfg = {
+    1: { maxDepth: 1, timeMs: 800, randomness: 0.5, quiesce: false },
+    2: { maxDepth: 3, timeMs: 1500, randomness: 0.05, quiesce: true },
+    3: { maxDepth: 4, timeMs: 3000, randomness: 0, quiesce: true },
+  }[difficulty]
+  const { scored } = searchScored(s, cfg)
+  if (!scored.length) {
+    const moves = legalMoves(s)
+    return moves.length ? { from: moves[0].from, to: moves[0].to, promotion: moves[0].promotion } : null
+  }
   const top = scored[0].v
   const ties = scored.filter((r) => Math.abs(r.v - top) <= 5)
   let choice = ties[Math.floor(Math.random() * ties.length)].m
@@ -236,3 +246,11 @@ export function bestMove(s, difficulty) {
   }
   return { from: choice.from, to: choice.to, promotion: choice.promotion }
 }
+
+// Analisi per la modalità istruttore.
+export function analyze(s) {
+  return searchScored(s, { maxDepth: 4, timeMs: 2000, quiesce: true })
+}
+
+export const MATE_SCORE = MATE
+export const moveKey = (m) => `${m.from}${m.to}${m.promotion || ''}`

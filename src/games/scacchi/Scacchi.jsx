@@ -2,13 +2,31 @@ import { useMemo, useState } from 'react'
 import GameShell, { resultFor } from '../../components/GameShell.jsx'
 import { useGame } from '../../hooks/useGame.js'
 import * as engine from './engine.js'
+import * as coachScacchi from '../../coach/scacchi.js'
+
+const COACH = {
+  moveKey: engine.moveKey,
+  unit: 130, // soglie più tolleranti: a profondità ridotta le differenze fra mosse d'apertura sono rumore
+  describe: (state, m) => coachScacchi.describeMove(state.fen, m),
+  explain: (stateBefore, grade, human) => coachScacchi.explain(stateBefore.fen, grade, engine.colorOf(human)),
+}
+
+const RULES = [
+  'Il bianco muove per primo. Scopo: dare scacco matto al re avversario, cioè attaccarlo senza che possa sfuggire.',
+  'Pedone: avanza di una casella (due dalla posizione iniziale), cattura in diagonale. Arrivato in fondo si promuove (di solito a donna).',
+  'Cavallo: muove a "L" e salta gli altri pezzi. Alfiere: diagonali. Torre: righe e colonne. Donna: entrambe. Re: una casella in ogni direzione.',
+  'Arrocco: re e torre si muovono insieme (il re di due caselle verso la torre) se nessuno dei due ha già mosso, le caselle in mezzo sono libere e il re non è né passa sotto scacco.',
+  'En passant: un pedone che avanza di due può essere catturato "al passaggio" dal pedone avversario adiacente, solo nella mossa immediatamente successiva.',
+  'Se il tuo re è sotto scacco devi parare subito. Se non hai mosse legali e non sei sotto scacco è stallo: patta.',
+  'Tocca un tuo pezzo per vedere dove può andare; tocca la destinazione per muovere.',
+]
 
 const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
 const FILES = 'abcdefgh'
 const PROMO = ['q', 'r', 'b', 'n']
 
 export default function Scacchi({ onHome }) {
-  const g = useGame('scacchi', engine)
+  const g = useGame('scacchi', engine, COACH, { moveKind: (p, n) => (n.history[n.history.length - 1]?.includes('x') ? 'capture' : 'move') })
   const { state, status, human, history } = g
   const [sel, setSel] = useState(null)
   const [promo, setPromo] = useState(null) // { from, to }
@@ -59,6 +77,7 @@ export default function Scacchi({ onHome }) {
   else statusText = 'Turno del computer'
 
   const rows = flipped ? [...board].reverse() : board
+  const hintMove = g.coach?.hint?.move
   const lastMoves = history.slice(-6).map((s) => s.history?.[s.history.length - 1]).filter(Boolean)
 
   return (
@@ -79,6 +98,9 @@ export default function Scacchi({ onHome }) {
         onChange: (v) => { setSel(null); setPromo(null); g.newGame({ human: Number(v) }) },
       }}
       result={resultFor(status, human, undefined, history.length)}
+      coach={g.coach && { ...g.coach, tips: coachScacchi.TIPS }}
+      rules={RULES}
+      canHint={g.isHumanTurn}
     >
       <div>
         <div className="board n8">
@@ -90,7 +112,7 @@ export default function Scacchi({ onHome }) {
               const dark = (file + rank) % 2 === 0
               const target = targets.find((m) => m.to === sq)
               const isLast = state.last && (state.last.from === sq || state.last.to === sq)
-              const cls = ['sq', dark ? 'dark' : 'light', sel === sq ? 'sel' : '', isLast ? 'last' : '', kingSq === sq ? 'check' : ''].join(' ')
+              const cls = ['sq', dark ? 'dark' : 'light', sel === sq ? 'sel' : '', isLast ? 'last' : '', kingSq === sq ? 'check' : '', hintMove?.from === sq ? 'hint-from' : '', hintMove?.to === sq ? 'hint-to' : ''].join(' ')
               return (
                 <div key={sq} className={cls} onClick={() => onSquare(sq)}>
                   {p && <span className={`chess-piece ${p.color}`}>{GLYPH[p.type]}&#xFE0E;</span>}
@@ -101,7 +123,7 @@ export default function Scacchi({ onHome }) {
           )}
         </div>
         {lastMoves.length > 0 && (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.85rem', marginTop: 8 }}>
+          <div className="moves-log">
             Ultime mosse: {lastMoves.join('  ')}
           </div>
         )}
