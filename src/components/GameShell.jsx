@@ -1,7 +1,33 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DIFFICULTY } from '../engine/minimax.js'
 import { LEVELS } from '../coach/coach.js'
 import SoundToggle from './SoundToggle.jsx'
+import { loadJSON, saveJSON } from '../storage.js'
+
+// Modalità "schermo intero": nasconde i pannelli secondari, ingrandisce la
+// plancia e, dove il browser lo consente, entra nel fullscreen di sistema.
+function useFocusMode() {
+  const [focus, setFocus] = useState(() => loadJSON('focus', { on: false }).on)
+  useEffect(() => {
+    saveJSON('focus', { on: focus })
+    const el = document.documentElement
+    try {
+      if (focus && !document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => {})
+      if (!focus && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {})
+    } catch {
+      /* browser senza Fullscreen API (es. iPhone): resta la sola modalità compatta */
+    }
+  }, [focus])
+  // se l'utente esce dal fullscreen con il tasto indietro/Esc, torna al layout normale
+  useEffect(() => {
+    const onChange = () => {
+      if (!document.fullscreenElement && focus && document.fullscreenEnabled) setFocus(false)
+    }
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [focus])
+  return [focus, setFocus]
+}
 
 // Cornice comune: barra superiore, stato, plancia, azioni, fine partita.
 export default function GameShell({
@@ -25,15 +51,19 @@ export default function GameShell({
   const [confirmNew, setConfirmNew] = useState(false)
   const [dismissed, setDismissed] = useState(null)
   const [showRules, setShowRules] = useState(false)
+  const [focus, setFocus] = useFocusMode()
   const showResult = result && dismissed !== result.key
   const tip = useMemo(() => (coach?.tips ? coach.tips[Math.floor(Math.random() * coach.tips.length)] : null), [coach?.tips, coach?.feedback])
   const summary = coach?.grades?.length ? summarize(coach.grades) : null
 
   return (
-    <div className="game">
+    <div className={`game ${focus ? 'focus' : ''}`}>
       <div className="topbar">
         <button className="icon" onClick={onHome} aria-label="Torna alla home">‹</button>
         <h2>{title}</h2>
+        <button className={`icon ${focus ? 'active' : ''}`} onClick={() => setFocus(!focus)} aria-label={focus ? 'Esci da schermo intero' : 'Schermo intero'} title="Schermo intero">
+          {focus ? '⤡' : '⛶'}
+        </button>
         <SoundToggle />
         {rules && <button className="icon" onClick={() => setShowRules(true)} aria-label="Regole">?</button>}
         <select value={difficulty} onChange={(e) => onDifficulty(e.target.value)} aria-label="Difficoltà">
@@ -47,7 +77,21 @@ export default function GameShell({
         {thinking ? <span className="thinking">Il computer sta pensando…</span> : <span>{statusText}</span>}
       </div>
 
-      <div className="board-wrap">{children}</div>
+      <div className="board-wrap">
+        {children}
+        {focus && coach?.enabled && (coach.hint || coach.feedback) && (
+          <div className="toast glass" key={coach.hint ? 'h' + coach.hint.text : 'f' + coach.feedback.text}>
+            {coach.hint ? (
+              <span><b>💡</b> {coach.hint.text}</span>
+            ) : (
+              <span>
+                <span className={`grade ${LEVELS[coach.feedback.grade.level].cls}`}>{LEVELS[coach.feedback.grade.level].icon} {LEVELS[coach.feedback.grade.level].label}</span>{' '}
+                {coach.feedback.text}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
       {coach && (
         <div className="coach glass">

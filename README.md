@@ -86,6 +86,16 @@ Effetti sonori sintetizzati con WebAudio in `src/sound.js` (nessun file audio): 
 errore, colpo/acqua/affondato, vittoria/sconfitta/patta, più una vibrazione leggera sulle catture (dove supportata).
 Interruttore 🔊/🔇 in home e in ogni partita; la scelta è salvata (`gto:sound`).
 
+## Schermo intero e layout
+
+Pulsante ⛶ nella barra di ogni partita: nasconde i pannelli secondari, ingrandisce la plancia al massimo
+e, dove il browser lo consente (Android, PC), entra nel fullscreen di sistema. Su iPhone il fullscreen di
+pagina non esiste: resta il layout compatto (e l'app installata in home è già senza barre del browser).
+I commenti dell'istruttore compaiono come notifica temporanea sopra la plancia. La scelta è ricordata.
+
+Su tablet e PC in orizzontale la schermata passa a due colonne: plancia a sinistra alla massima altezza,
+stato / istruttore / comandi a destra.
+
 ## Salvataggio
 
 Partite e impostazioni sono salvate in `localStorage` (chiavi `gto:*`); la home mostra il badge
