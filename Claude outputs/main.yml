@@ -1,0 +1,51 @@
+# Unico workflow: test + build a ogni push; pubblicazione su GitHub Pages
+# solo quando il push arriva sul ramo main.
+# Prerequisito (una volta sola): Settings → Pages → Source: "GitHub Actions".
+name: CI e pubblicazione
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Test dei motori di gioco
+        run: npm test
+      - name: Build di produzione
+        run: npm run build
+      - name: Carica la build per GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    # pubblica solo dal ramo main (non da altri rami né da pull request)
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
